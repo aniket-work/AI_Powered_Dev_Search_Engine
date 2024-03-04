@@ -1,0 +1,149 @@
+version: '3.8'
+
+services:
+
+  # Ollama service with GPU acceleration for language processing
+  llm-gpu:
+    image: ollama/ollama:latest
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # Service to pull model for local processing
+  # Environment variables set for Ollama base URL and LLM model
+  pull-model:
+    image: local-model:latest
+    build:
+      context: .
+      dockerfile: pull_model.Dockerfile
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - LLM=llama2
+    networks:
+      - net
+    tty: true
+
+  # Neo4j database service with volume for data persistence
+  # Environment variables set for Neo4j authentication and plugins
+  database:
+    user: neo4j:neo4j
+    image: neo4j:5.11
+    ports:
+      - 7687:7687
+      - 7474:7474
+    volumes:
+      - $PWD/data:/data
+    environment:
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_db_tx__log_rotation_retention__policy=false
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1"]
+      interval: 15s
+      timeout: 30s
+      retries: 10
+    networks:
+      - net
+
+  # Service to load data into Neo4j database
+  # Environment variables set for Neo4j URI and Ollama base URL
+  loader:
+    build:
+      context: .
+      dockerfile: loader.Dockerfile
+    volumes:
+      - $PWD/embedding_model:/embedding_model
+    environment:
+      - NEO4J_URI=neo4j://database:7687
+      - NEO4J_PASSWORD=password
+      - NEO4J_USERNAME=neo4j
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      # Add any other necessary environment variables
+    networks:
+      - net
+    depends_on:
+      database:
+        condition: service_healthy
+      pull-model:
+        condition: service_completed_successfully
+    ports:
+      - 8081:8080
+      - 8502:8502
+
+  # Bot service for interaction with the Neo4j database
+  # Environment variables set for Neo4j authentication, Ollama base URL, and LLM model
+  bot:
+    build:
+      context: .
+      dockerfile: bot.Dockerfile
+    volumes:
+      - $PWD/embedding_model:/embedding_model
+    environment:
+      - NEO4J_URI=neo4j://database:7687
+      - NEO4J_PASSWORD=password
+      - NEO4J_USERNAME=neo4j
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - LLM=llama2
+
+    networks:
+      - net
+    depends_on:
+      database:
+        condition: service_healthy
+      pull-model:
+        condition: service_completed_successfully
+    ports:
+      - 8501:8501
+
+  # Standalone HTTP API service for answering questions
+  # Environment variables set for Neo4j URI, authentication, Ollama base URL, and LLM model
+  api:
+    build:
+      context: .
+      dockerfile: api.Dockerfile
+    volumes:
+      - $PWD/embedding_model:/embedding_model
+    environment:
+      - NEO4J_URI=neo4j://localhost:7687
+      - NEO4J_PASSWORD=password
+      - NEO4J_USERNAME=neo4j
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - LLM=llama2
+
+    networks:
+      - net
+    depends_on:
+      database:
+        condition: service_healthy
+      pull-model:
+        condition: service_completed_successfully
+    ports:
+      - 8504:8504
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 http://localhost:8504/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Static front-end application built separately from the back-end
+  # No additional environment variables or dependencies
+  front-end:
+    build:
+      context: .
+      dockerfile: front-end.Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - net
+    ports:
+      - 8505:8505
+
+# Docker network for inter-container communication
+networks:
+  net:
