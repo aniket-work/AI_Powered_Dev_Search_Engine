@@ -65,13 +65,16 @@
 
             <div class="w-4/5 mx-auto flex flex-col mb-32">
                 {#each $chatStore.data as message (message.id)}
+                 {#if message.from === "me"}
+                 <div class="text-sm">
+                                                         <div>Answering for : {message.text}</div>
+                                                     </div>
+                 {/if}
                     {#if message.from === "bot"}
                         <div
                             class="max-w-[80%] min-w-[40%] rounded-lg p-4 mb-4 overflow-x-auto bg-white border border-blue-200">
                             <div class="flex flex-row gap-2">
-                                    <div class="text-sm">
-                                        <div>Answering for : {question}</div>
-                                    </div>
+
                             </div>
                             <div class="mt-4"><SvelteMarkdown source={message.text} renderers={{ link: MdLink }} /></div>
                         </div>
