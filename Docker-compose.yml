@@ -36,7 +36,7 @@ services:
       - 7687:7687
       - 7474:7474
     volumes:
-      - $PWD/data:/data
+      - C:/samadhi/workspace/java/AI_Powered_Dev_Search_Engine/data:/data:rw
     environment:
       - NEO4J_AUTH=neo4j/password
       - NEO4J_PLUGINS=["apoc"]
@@ -75,30 +75,6 @@ services:
       - 8081:8080
       - 8502:8502
 
-  # Bot service for interaction with the Neo4j database
-  # Environment variables set for Neo4j authentication, Ollama base URL, and LLM model
-  bot:
-    build:
-      context: .
-      dockerfile: bot.Dockerfile
-    volumes:
-      - $PWD/embedding_model:/embedding_model
-    environment:
-      - NEO4J_URI=neo4j://database:7687
-      - NEO4J_PASSWORD=password
-      - NEO4J_USERNAME=neo4j
-      - OLLAMA_BASE_URL=http://host.docker.internal:11434
-      - LLM=llama2
-
-    networks:
-      - net
-    depends_on:
-      database:
-        condition: service_healthy
-      pull-model:
-        condition: service_completed_successfully
-    ports:
-      - 8501:8501
 
   # Standalone HTTP API service for answering questions
   # Environment variables set for Neo4j URI, authentication, Ollama base URL, and LLM model
@@ -109,9 +85,9 @@ services:
     volumes:
       - $PWD/embedding_model:/embedding_model
     environment:
-      - NEO4J_URI=neo4j://localhost:7687
-      - NEO4J_PASSWORD=password
+      - NEO4J_URI=bolt://database:7687
       - NEO4J_USERNAME=neo4j
+      - NEO4J_PASSWORD=password
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
       - LLM=llama2
 
@@ -136,6 +112,15 @@ services:
     build:
       context: .
       dockerfile: front-end.Dockerfile
+    x-develop:
+      watch:
+        - action: sync
+          path: ./front-end
+          target: /app
+          ignore:
+            - ./front-end/node_modules/
+        - action: rebuild
+          path: ./front-end/package.json
     depends_on:
       api:
         condition: service_healthy

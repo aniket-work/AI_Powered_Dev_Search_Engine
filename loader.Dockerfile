@@ -16,7 +16,6 @@ COPY loader.py .
 COPY utils.py .
 COPY chains.py .
 COPY images ./images
-
 EXPOSE 8502
 
 HEALTHCHECK CMD curl --fail http://localhost:8502/_stcore/health
