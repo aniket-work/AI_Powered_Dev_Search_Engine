@@ -19,7 +19,6 @@
 
     function send() {
         chatStore.send(question, ragMode);
-
     }
 
     function scrollToBottom(node, _) {
@@ -46,7 +45,7 @@
 </script>
 
 <main class="h-full text-sm bg-gradient-to-t from-blue-50 to-blue-100 bg-fixed overflow-hidden">
-    <div on:scroll={scrolling} class="flex h-full flex-col py-12 overflow-y-auto" use:scrollToBottom={$chatStore}>
+    <div on:scroll={scrolling} class="flex h-full flex-col py-12 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-blue-200" use:scrollToBottom={$chatStore}>
 
         <div class="text-sm w-full fixed bottom-16">
             <!-- Question section -->
@@ -65,27 +64,22 @@
 
             <div class="w-4/5 mx-auto flex flex-col mb-32">
                 {#each $chatStore.data as message (message.id)}
-                 {#if message.from === "me"}
-                 <div class="text-sm">
-                                                         <div>Answering for : {message.text}</div>
-                                                     </div>
-                 {/if}
+                    {#if message.from === "me"}
+                        <div class="text-sm mb-4 pl-4">
+                            <div class="border-l-4 border-blue-500 pl-2 p-2 mb-2">Answering for: {message.text}</div>
+                        </div>
+                    {/if}
                     {#if message.from === "bot"}
-                        <div
-                            class="max-w-[80%] min-w-[40%] rounded-lg p-4 mb-4 overflow-x-auto bg-white border border-blue-200">
-                            <div class="flex flex-row gap-2">
-
-                            </div>
-                            <div class="mt-4"><SvelteMarkdown source={message.text} renderers={{ link: MdLink }} /></div>
+                        <div class="max-w-[80%] min-w-[40%] rounded-lg p-4 mb-4 overflow-x-auto bg-white border border-blue-200">
+                            <SvelteMarkdown source={message.text} renderers={{ link: MdLink }} />
                         </div>
                     {/if}
                 {/each}
             </div>
-
         </div>
-
     </div>
 </main>
+
 
 {#if generationModalOpen}
     <Modal title="my title" text="my text" on:close={() => (generationModalOpen = false)} />
