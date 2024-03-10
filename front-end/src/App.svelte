@@ -1,8 +1,9 @@
 <!-- App.svelte -->
+
 <script>
     import { tick } from "svelte";
     import SvelteMarkdown from "svelte-markdown";
-    import botImage from "./assets/images/bot.jpeg";
+    import botImage from "./assets/images/search_icon.jpg";
     import meImage from "./assets/images/me.jpeg";
     import MdLink from "./lib/MdLink.svelte";
     import External from "./lib/External.svelte";
@@ -11,14 +12,17 @@
     import { generationStore } from "./lib/generation.store";
 
     let ragMode = true;
-    let question = "How can I calculate age from date of birth in Cypher?";
+    let question = "";
     let shouldAutoScroll = true;
     let input;
     let senderImages = { bot: botImage, me: meImage };
     let generationModalOpen = false;
 
     function send() {
-        chatStore.send(question, ragMode);
+        if (question.trim() !== "") {
+            chatStore.send(question, ragMode);
+            question = ""; // Clear the input field after sending
+        }
     }
 
     function scrollToBottom(node, _) {
@@ -44,29 +48,19 @@
     // send();
 </script>
 
-<main class="h-full text-sm bg-gradient-to-t from-blue-50 to-blue-100 bg-fixed overflow-hidden">
-    <div on:scroll={scrolling} class="flex h-full flex-col py-12 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-blue-200" use:scrollToBottom={$chatStore}>
+<main class="h-screen flex flex-col justify-center items-center bg-gradient-to-b from-blue-50 to-blue-100">
+    <div class="text-center mb-10">
+        <img src={botImage} alt="Logo" class="mx-auto mb-12 w-44 h-40 rounded-full" />
+        <h1 class="text-3xl font-bold text-blue-600">Graph Based AI-Powered Search Engine</h1>
+    </div>
 
-        <div class="text-sm w-full fixed bottom-16">
-            <!-- Question section -->
-            <div class="shadow-lg bg-blue-50 rounded-lg w-4/5 xl:w-2/3 2xl:w-1/2 mx-auto gap-10">
-                <form class="rounded-md w-full bg-white p-2 m-0" on:submit|preventDefault={send}>
-                    <input
-                        placeholder="What coding related question can I help you with?"
-                        disabled={$chatStore.state === chatStates.RECEIVING}
-                        class="text-lg w-full bg-white focus:outline-none px-4"
-                        bind:value={question}
-                        bind:this={input}
-                        type="text"
-                    />
-                </form>
-            </div>
-
-            <div class="w-4/5 mx-auto flex flex-col mb-32">
+    <div class="w-full max-w-7xl p-4 bg-white rounded-lg shadow-lg">
+        <div class="flex flex-col h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-blue-200" use:scrollToBottom={$chatStore}>
+            <div on:scroll={scrolling} class="flex flex-col flex-grow">
                 {#each $chatStore.data as message (message.id)}
                     {#if message.from === "me"}
                         <div class="text-sm mb-4 pl-4">
-                            <div class="border-l-4 border-blue-500 pl-2 p-2 mb-2">Answering for: {message.text}</div>
+                            <div class="border-l-4 border-blue-500 pl-2 p-2 mb-2"><span class="font-bold">Answering for:</span> {message.text}</div>
                         </div>
                     {/if}
                     {#if message.from === "bot"}
@@ -77,9 +71,27 @@
                 {/each}
             </div>
         </div>
+
+        <form class="mt-4" on:submit|preventDefault={send}>
+           <div class="flex">
+                          <input
+                              placeholder=""
+                              disabled={$chatStore.state === chatStates.RECEIVING}
+                              class="flex-grow text-lg bg-gray-100 focus:outline-none px-4 py-2 rounded-l-lg"
+                              bind:value={question}
+                              bind:this={input}
+                              type="text"
+                          />
+                          <button class="bg-transparent hover:bg-transparent text-blue-300 font-bold py-4 px-4 rounded-r-lg flex items-center" on:click={send}>
+                              <svg class="h-8 w-9" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                          <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                                      </svg>
+                          </button>
+                      </div>
+
+        </form>
     </div>
 </main>
-
 
 {#if generationModalOpen}
     <Modal title="my title" text="my text" on:close={() => (generationModalOpen = false)} />
@@ -92,4 +104,7 @@
     :global(code) {
         @apply text-blue-500;
     }
+
+    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
+
 </style>
